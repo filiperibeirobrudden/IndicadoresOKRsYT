@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="refresh" content="1800" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Indicadores OKRs - Movement Fitness</title>
+    <link rel="shortcut icon" HREF="https://www.movement.com.br/wp-content/uploads/2023/01/cropped-favicon-270x270.png">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000000;
+        }
+        
+        .iframe-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .iframe-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            opacity: 0;
+            z-index: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .iframe-container iframe.active {
+            opacity: 1;
+            z-index: 2;
+        }
+        
+        .ajuste {
+            margin-top: -5px;
+            margin-left: -8px;
+            width: 101% !important;
+            height: 109vh !important;
+            border: none;
+        }
+        
+        #controls-wrapper {
+            position: fixed;
+            top: 2px;
+            left: 10px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        #controls-container {
+            display: flex;
+            align-items: center;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+        
+        #controls-container.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .control-btn {
+            width: 25px;
+            height: 25px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin: 0 4px;
+        }
+        
+        .control-btn svg {
+            fill: white;
+            width: 20px;
+            height: 20px;
+        }
+        
+        select {
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 4px 6px;
+            margin-left: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        #progressBar {
+            width: calc(40px * 3 + 8px * 2);
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid rgba(220,220,220,1);
+            /* margin-top: 6px; (Removido) */
+        }
+
+        #progress-wrapper {
+            display: flex;
+            align-items: center; /* Alinha a barra e o texto verticalmente ao centro */
+            gap: 10px; /* Dá um espaço de 10px entre a barra e o número */
+            margin-top: -2px;
+        }
+        
+        #progressFill {
+            height: 100%;
+            width: 0%;
+            background-color: rgba(128, 255, 0, 1);
+            transition: width 0.1s linear;
+        }
+        
+        #slideCounter {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            /* margin-top: 4px; (Removido) */
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        
+        #canvas-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9998;
+            pointer-events: none;
+            display: none;
+        }
+        
+        #transition-video {
+            display: none;
+        }
+        
+        #dots-wrapper {
+            position: fixed;
+            top: 30px;
+            left: 350px;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            gap: 8px;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+        
+        #dots-wrapper.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .dot:hover {
+            background-color: rgba(255, 255, 255, 0.7);
+            transform: scale(1.2);
+        }
+        
+        .dot.active {
+            background-color: rgba(128, 255, 0, 1);
+            box-shadow: 0 0 8px rgba(0, 220, 80, 0.6);
+            transform: scale(1.3);
+        }
+        
+        .dot-preview {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 280px;
+            height: 180px;
+            background-color: rgba(0, 0, 0, 0.98);
+            border-radius: 8px;
+            padding: 8px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+        }
+        
+        .dot:hover .dot-preview {
+            display: flex;
+        }
+        
+        .dot-preview-frame {
+            width: 280px;
+            height: 158px;
+            overflow: hidden;
+            border-radius: 4px;
+            background-color: #1a1a1a;
+        }
+        
+        .dot-preview-frame iframe {
+            width: 1280px;
+            height: 720px;
+            border: none;
+            transform: scale(0.21875);
+            transform-origin: top left;
+            pointer-events: none;
+        }
+        
+        .dot-preview-label {
+            font-size: 11px;
+            color: white;
+            margin-top: 6px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 260px;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+    </style>
+    <iframe 
+    src="https://www.youtube.com/embed/loWCauTKYU0?autoplay=1&mute=1" 
+    width="220" height="124" 
+    frameborder="0" 
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+    referrerpolicy="strict-origin-when-cross-origin" 
+    allowfullscreen 
+    style="position:fixed; top:10px; right:10px; z-index:9999;">
+    </iframe>
+</head>
+
+<body>
+    <div class="iframe-container">
+        <iframe id="powerbi-frame-1" class="ajuste active" src="" allowfullscreen="true"></iframe>
+        <iframe id="powerbi-frame-2" class="ajuste" src="" allowfullscreen="true"></iframe>
+    </div>
+
+    <canvas id="canvas-overlay"></canvas>
+    <video id="transition-video" muted playsinline crossorigin="anonymous" preload="auto"></video>
+
+    <div id="controls-wrapper">
+        <div id="controls-container">
+            <button id="prevBtn" class="control-btn" title="Anterior">
+                <svg viewBox="0 0 24 24">
+                    <polygon points="11,12 18,18 18,6" />
+                    <polygon points="6,12 13,18 13,6" />
+                </svg>
+            </button>
+            <button id="playPauseBtn" class="control-btn" title="Parar/Retomar">
+                <svg id="pauseIcon" viewBox="0 0 24 24">
+                    <rect x="6" y="4" width="4" height="16" />
+                    <rect x="14" y="4" width="4" height="16" />
+                </svg>
+                <svg id="playIcon" viewBox="0 0 24 24" style="display: none;">
+                    <polygon points="8,5 19,12 8,19" />
+                </svg>
+            </button>
+            <button id="nextBtn" class="control-btn" title="Próximo">
+                <svg viewBox="0 0 24 24">
+                    <polygon points="6,6 6,18 13,12" />
+                    <polygon points="11,6 11,18 18,12" />
+                </svg>
+            </button>
+            <select id="interval-selector" title="Tempo (segundos)">
+                <option value="5">5s</option>
+                <option value="10">10s</option>
+                <option value="15">15s</option>
+                <option value="20">20s</option>
+                <option value="30">30s</option>
+                <option value="45" selected>45s</option>
+                <option value="60">1min</option>
+                <option value="120">2min</option>
+            </select>
+        </div>
+        <div id="progress-wrapper">
+            <div id="progressBar">
+                <div id="progressFill"></div>
+            </div>
+            <div id="slideCounter">1 / 15</div>
+        </div>
+    </div>
+
+    <div id="dots-wrapper"></div>
+
+    <script>
+        /* =================================================================================
+        MANUAL DE MANUTENÇÃO DOS INDICADORES (OKRs - MOVEMENT)
+        ================================================================================
+        COMO ADICIONAR UM NOVO RELATÓRIO:
+        1. Obtenha o link base no Power BI: 
+            (Arquivo > Inserir Relatório > Site ou Portal).
+
+        2. Monte a URL seguindo OBRIGATORIAMENTE esta estrutura de parâmetros:
+            https://app.powerbi.com/reportEmbed?reportId=ID_DO_RELATORIO
+            &autoAuth=true <-- (Garante que o usuário logado seja autenticado automaticamente)
+            &ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad <-- (ID fixo da nossa organização no Power BI)
+            &pageName=ID_DA_PAGINA  <-- (Pegue na URL do navegador ao clicar na aba)
+            &filterPaneEnabled=false <-- (Esconde filtros laterais)
+            &navContentPaneEnabled=false <-- (Esconde abas inferiores)
+
+        3. Adicione uma nova linha no array 'relatorios' abaixo, respeitando as chaves {} 
+            e a vírgula no final de cada item.
+
+        O contador (X / Y) e as "bolinhas" de navegação se atualizam sozinhos!
+        ================================================================================
+        */
+        
+        // Array unificado: mais fácil de manter e adicionar novos links!
+        const relatorios = [
+            { nome: "OS Abertas e Encerradas", url: "https://app.powerbi.com/reportEmbed?reportId=5b82a69a-b3ee-41f0-8853-18f4d1507c98&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=b29465778df401e16e12&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "OS em Garantia Pendentes +30 dias", url: "https://app.powerbi.com/reportEmbed?reportId=5b82a69a-b3ee-41f0-8853-18f4d1507c98&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=8efa0d2eaa6a4da06a2e&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "SLA OS Encerradas <30 dias", url: "https://app.powerbi.com/reportEmbed?reportId=5b82a69a-b3ee-41f0-8853-18f4d1507c98&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=1cd7d52409e343310345&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "MTBF — Tempo Médio Entre Falhas", url: "https://app.powerbi.com/reportEmbed?reportId=5b82a69a-b3ee-41f0-8853-18f4d1507c98&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=d794b6eb5d6976770d10&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "MTTR — Tempo Médio para Reparo", url: "https://app.powerbi.com/reportEmbed?reportId=5b82a69a-b3ee-41f0-8853-18f4d1507c98&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=c99bb7233de69e04b58c&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "TMA — Tempo Médio de Atendimento", url: "https://app.powerbi.com/reportEmbed?reportId=5b82a69a-b3ee-41f0-8853-18f4d1507c98&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=259655dfcee3c998e086&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "CSAT — Satisfação Serviço Técnico", url: "https://app.powerbi.com/reportEmbed?reportId=6211cb47-40da-4dac-8287-5e8df33e989a&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=b29465778df401e16e12&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "CSAT — Satisfação Atendimento", url: "https://app.powerbi.com/reportEmbed?reportId=6211cb47-40da-4dac-8287-5e8df33e989a&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=b9898bb8a7e48a0896d7&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "Reclame Aqui", url: "https://app.powerbi.com/reportEmbed?reportId=463a93e2-17d7-46e9-9871-2cc0154a2604&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=f01ea02c29bd289ffa3d&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "Faturamento Fitness", url: "https://app.powerbi.com/reportEmbed?reportId=cce4ef29-638a-47c8-849a-4ed4aa490158&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=5cba622b6a20a56ad424&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "OS Aguardando Aprovação 24h", url: "https://app.powerbi.com/reportEmbed?reportId=03c711b1-e95a-4691-8b88-558a7f487bf0&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=859aa5509b0138f917d8&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "TMA Atendimento Zendesk", url: "https://app.powerbi.com/reportEmbed?reportId=0499309f-47ac-47bd-a5e4-a43bdcd351c6&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=9eabd5e0acae609c74d4&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "OS de Venda/Garantia em 24h", url: "https://app.powerbi.com/reportEmbed?reportId=492b78d4-b0ba-4e1d-a3f5-7203d79aae5d&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=2c40bc3bb59b593e583d&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "85% OS Garantia em <30 dias", url: "https://app.powerbi.com/reportEmbed?reportId=5b82a69a-b3ee-41f0-8853-18f4d1507c98&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=0cb88bb1b61b49ab957e&filterPaneEnabled=false&navContentPaneEnabled=false" },
+            { nome: "Turnover", url: "https://app.powerbi.com/reportEmbed?reportId=5c2fa056-86d9-4020-9d1a-7337d4eec6c6&autoAuth=true&ctid=28530a30-55a8-4dd4-822a-4b12f0b81bad&pageName=f5831721ef7bdb60c292&filterPaneEnabled=false&navContentPaneEnabled=false" }
+        ];
+
+        let curr = 0;
+        let isPaused = false;
+        let timer;
+        let nextPanelTimer;
+        let progressInterval;
+        let panelDuration = 45000;
+        let activeFrame = 1;
+        let videoDuration = 3000;
+        let videoStartTime = 44500;
+
+        const iframe1 = document.getElementById("powerbi-frame-1");
+        const iframe2 = document.getElementById("powerbi-frame-2");
+        const playPauseBtn = document.getElementById("playPauseBtn");
+        const pauseIcon = document.getElementById("pauseIcon");
+        const playIcon = document.getElementById("playIcon");
+        const progressFill = document.getElementById("progressFill");
+        const controlsContainer = document.getElementById("controls-container");
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+        const intervalSelector = document.getElementById("interval-selector");
+        const canvasOverlay = document.getElementById("canvas-overlay");
+        const transitionVideo = document.getElementById("transition-video");
+        const slideCounter = document.getElementById("slideCounter");
+        const dotsWrapper = document.getElementById("dots-wrapper");
+
+        const ctx = canvasOverlay.getContext('2d', { willReadFrequently: true });
+        canvasOverlay.width = window.innerWidth;
+        canvasOverlay.height = window.innerHeight;
+
+        const chromaKey = { r: 254, g: 55, b: 202 };
+        const threshold = 120;
+
+        transitionVideo.src = "https://files.catbox.moe/698jfk.mp4";
+        transitionVideo.setAttribute('preload', 'auto');
+        transitionVideo.setAttribute('type', 'video/mp4');
+
+        transitionVideo.onloadedmetadata = function() {
+            videoDuration = transitionVideo.duration * 1000;
+            videoStartTime = panelDuration - 500;
+        };
+
+        function createDots() {
+            dotsWrapper.innerHTML = '';
+            for (let i = 0; i < relatorios.length; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.dataset.index = i;
+                
+                const preview = document.createElement('div');
+                preview.className = 'dot-preview';
+                
+                const previewFrame = document.createElement('div');
+                previewFrame.className = 'dot-preview-frame';
+                
+                const iframe = document.createElement('iframe');
+                // Puxa a url do novo array
+                iframe.dataset.src = relatorios[i].url; 
+                
+                previewFrame.appendChild(iframe);
+                
+                const label = document.createElement('div');
+                label.className = 'dot-preview-label';
+                // Puxa o nome do novo array
+                label.textContent = relatorios[i].nome; 
+                
+                preview.appendChild(previewFrame);
+                preview.appendChild(label);
+                dot.appendChild(preview);
+                
+                dot.addEventListener('mouseenter', function() {
+                    const iframe = this.querySelector('iframe');
+                    if (iframe.dataset.src && !iframe.src) {
+                        iframe.src = iframe.dataset.src;
+                    }
+                });
+                
+                dot.addEventListener('click', function() {
+                    const index = parseInt(this.dataset.index);
+                    resetState();
+                    curr = index;
+                    const currentFrame = activeFrame === 1 ? iframe1 : iframe2;
+                    currentFrame.src = relatorios[curr].url;
+                    updateUI(curr);
+                    if (!isPaused) showPanel();
+                });
+                
+                dotsWrapper.appendChild(dot);
+            }
+        }
+
+        function updateUI(index) {
+            // Aqui o contador fica dinâmico! Sempre vai mostrar o total correto de links.
+            slideCounter.textContent = `${index + 1} / ${relatorios.length}`;
+            
+            const dots = dotsWrapper.querySelectorAll('.dot');
+            dots.forEach((dot, i) => {
+                dot.classList.toggle('active', i === index);
+            });
+        }
+
+        function applyChromaKey() {
+            if (!transitionVideo.paused && !transitionVideo.ended) {
+                ctx.clearRect(0, 0, canvasOverlay.width, canvasOverlay.height);
+                const videoAspect = transitionVideo.videoWidth / transitionVideo.videoHeight;
+                const canvasAspect = canvasOverlay.width / canvasOverlay.height;
+                let drawWidth, drawHeight, offsetX, offsetY;
+                if (canvasAspect > videoAspect) {
+                    drawWidth = canvasOverlay.width;
+                    drawHeight = canvasOverlay.width / videoAspect;
+                    offsetX = 0;
+                    offsetY = (canvasOverlay.height - drawHeight) / 2;
+                } else {
+                    drawHeight = canvasOverlay.height;
+                    drawWidth = canvasOverlay.height * videoAspect;
+                    offsetX = (canvasOverlay.width - drawWidth) / 2;
+                    offsetY = 0;
+                }
+                ctx.drawImage(transitionVideo, offsetX, offsetY, drawWidth, drawHeight);
+                const frame = ctx.getImageData(0, 0, canvasOverlay.width, canvasOverlay.height);
+                const data = frame.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i+1], b = data[i+2];
+                    const distance = Math.sqrt(Math.pow(r-chromaKey.r,2)+Math.pow(g-chromaKey.g,2)+Math.pow(b-chromaKey.b,2));
+                    if (distance < threshold) data[i+3] = 0;
+                }
+                ctx.putImageData(frame, 0, 0);
+                requestAnimationFrame(applyChromaKey);
+            }
+        }
+
+        function playTransitionVideo(onTransitionComplete) {
+            canvasOverlay.style.display = 'block';
+            transitionVideo.currentTime = 0;
+            transitionVideo.play();
+            applyChromaKey();
+            setTimeout(() => { if (onTransitionComplete) onTransitionComplete(); }, videoDuration / 2);
+            transitionVideo.onended = function() {
+                canvasOverlay.style.display = 'none';
+                ctx.clearRect(0, 0, canvasOverlay.width, canvasOverlay.height);
+            };
+        }
+
+        function resetState() {
+            clearTimeout(timer);
+            clearTimeout(nextPanelTimer);
+            clearInterval(progressInterval);
+            transitionVideo.pause();
+            transitionVideo.currentTime = 0;
+            canvasOverlay.style.display = 'none';
+            ctx.clearRect(0, 0, canvasOverlay.width, canvasOverlay.height);
+            progressFill.style.width = "0%";
+        }
+
+        function showPanel() {
+            const currentFrame = activeFrame === 1 ? iframe1 : iframe2;
+            const nextFrame = activeFrame === 1 ? iframe2 : iframe1;
+            const nextIndex = (curr + 1) % relatorios.length; // Atualizado para usar o novo array
+            nextFrame.src = relatorios[nextIndex].url; // Atualizado para usar o novo array
+
+            if (!isPaused) {
+                let start = Date.now();
+                progressFill.style.width = "0%";
+                clearInterval(progressInterval);
+                progressInterval = setInterval(() => {
+                    const elapsed = Date.now() - start;
+                    const percent = Math.min((elapsed / panelDuration) * 100, 100);
+                    progressFill.style.width = percent + "%";
+                }, 100);
+
+                clearTimeout(timer);
+                timer = setTimeout(() => {
+                    playTransitionVideo(() => {
+                        currentFrame.classList.remove("active");
+                        nextFrame.classList.add("active");
+                        activeFrame = activeFrame === 1 ? 2 : 1;
+                        curr = nextIndex;
+                        updateUI(curr);
+                    });
+                }, videoStartTime);
+
+                clearTimeout(nextPanelTimer);
+                nextPanelTimer = setTimeout(() => {
+                    clearInterval(progressInterval);
+                    showPanel();
+                }, panelDuration + (videoDuration - 500));
+            }
+        }
+
+        intervalSelector.addEventListener("change", () => {
+            panelDuration = parseInt(intervalSelector.value) * 1000;
+            videoStartTime = panelDuration - 500;
+            if (!isPaused) { resetState(); showPanel(); }
+        });
+
+        playPauseBtn.addEventListener("click", () => {
+            isPaused = !isPaused;
+            pauseIcon.style.display = isPaused ? "none" : "block";
+            playIcon.style.display = isPaused ? "block" : "none";
+            if (isPaused) { resetState(); } else { showPanel(); }
+        });
+
+        prevBtn.addEventListener("click", () => {
+            resetState();
+            curr = (curr - 1 + relatorios.length) % relatorios.length; // Atualizado para usar o novo array
+            const currentFrame = activeFrame === 1 ? iframe1 : iframe2;
+            currentFrame.src = relatorios[curr].url; // Atualizado para usar o novo array
+            updateUI(curr);
+            if (!isPaused) showPanel();
+        });
+
+        nextBtn.addEventListener("click", () => {
+            resetState();
+            curr = (curr + 1) % relatorios.length; // Atualizado para usar o novo array
+            const currentFrame = activeFrame === 1 ? iframe1 : iframe2;
+            currentFrame.src = relatorios[curr].url; // Atualizado para usar o novo array
+            updateUI(curr);
+            if (!isPaused) showPanel();
+        });
+
+        let inactivityTimeout;
+        function resetInactivityTimer() {
+            controlsContainer.classList.remove("hidden");
+            dotsWrapper.classList.remove("hidden");
+            clearTimeout(inactivityTimeout);
+            inactivityTimeout = setTimeout(() => {
+                controlsContainer.classList.add("hidden");
+                dotsWrapper.classList.add("hidden");
+            }, 5000);
+        }
+
+        document.addEventListener("mousemove", resetInactivityTimer);
+        document.addEventListener("keydown", resetInactivityTimer);
+        resetInactivityTimer();
+
+        window.addEventListener('resize', () => {
+            canvasOverlay.width = window.innerWidth;
+            canvasOverlay.height = window.innerHeight;
+        });
+
+        createDots();
+        iframe1.src = relatorios[curr].url; // Atualizado
+        updateUI(curr);
+        showPanel();
+    </script>
+</body>
+</html>
